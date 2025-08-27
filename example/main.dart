@@ -1,7 +1,6 @@
 import 'dart:convert';
 
 import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:json_annotation/json_annotation.dart';
 import 'package:soti_schema_plus/annotations.dart';
 
 part 'main.freezed.dart';
@@ -252,46 +251,47 @@ void main() {
   // Example 1: Basic Freezed Model
   print('1. Freezed Model Schema:');
   print('------------------------');
-  // Once generated, this will print the JSON schema
-  // print(FreezedPerson.schema);
-  print('Schema will be available after running build_runner\n');
+  print(FreezedPerson.schema);
+  print('');
 
   // Example 2: JsonSerializable Model
   print('2. JsonSerializable Model Schema (String):');
   print('------------------------------------------');
-  // print(JsonPerson.schema);
-  print('Schema string will be available after running build_runner\n');
+  print(JsonPerson.schema);
+  print('');
 
   print('3. JsonSerializable Model Schema (Map):');
   print('---------------------------------------');
-  // print(jsonEncode(JsonPerson.schemaMap));
-  print('Schema map will be available after running build_runner\n');
+  print(jsonEncode(JsonPerson.schemaMap));
+  print('');
 
   // Example 3: Model with Documentation
   print('4. Documented Model Schema:');
   print('---------------------------');
-  // print(DocumentedPerson.schema);
-  print('Schema with descriptions will be available after running build_runner\n');
+  final docSchema = jsonDecode(DocumentedPerson.schema);
+  print(jsonEncode(docSchema));
+  print('');
 
   // Example 4: Complex Nested Model
   print('5. Employee Model Schema:');
   print('-------------------------');
-  // print(Employee.schemaString);
-  print('Complex schema will be available after running build_runner\n');
+  final empSchema = jsonDecode(Employee.schemaString);
+  print(jsonEncode(empSchema));
+  print('');
 
   print('6. Address Model Schema:');
   print('------------------------');
-  // print(Address.schema);
-  print('Address schema will be available after running build_runner\n');
+  final addrSchema = jsonDecode(Address.schema);
+  print(jsonEncode(addrSchema));
+  print('');
 
   // Example 5: Product Catalog
   print('7. Product Model Schema:');
   print('------------------------');
-  // print(Product.schema);
-  print('Product schema will be available after running build_runner\n');
+  final prodSchema = jsonDecode(Product.schema);
+  print(jsonEncode(prodSchema));
+  print('');
 
-  // Comment out these examples until build_runner generates the necessary files
-  /*
   // Demonstrate creating and serializing objects
   print('\n=== Object Creation Examples ===\n');
 
@@ -318,7 +318,7 @@ void main() {
       country: 'USA',
     ),
   );
-  print('\nEmployee: ${employee.toJson()}');
+  print('\nEmployee: ${jsonEncode(employee.toJson())}');
 
   final product = Product(
     productId: 'PROD-001',
@@ -334,15 +334,15 @@ void main() {
     releaseDate: DateTime(2024, 1, 15),
     warrantyMonths: 24,
   );
-  print('\nProduct: ${product.toJson()}');
-  */
+  print('\nProduct: ${jsonEncode(product.toJson())}');
 
-  print('\n=== Instructions ===');
-  print('1. Run: dart pub get');
-  print('2. Run: dart run build_runner build --delete-conflicting-outputs');
-  print('3. Uncomment the example code in main() to test');
-  print('4. Run: dart run example/main.dart');
+  print('\n=== Success! ===');
+  print('All models are working correctly with:');
+  print('- JSON serialization/deserialization');
+  print('- Freezed immutability and copy methods');
+  print('- SotiSchema JSON schema generation');
   print('');
-  print('This will generate all the necessary .g.dart and .freezed.dart files');
-  print('and make the schema constants available for use.');
+  print('Generated files created successfully:');
+  print('- main.g.dart (JSON serialization + schemas)');
+  print('- main.freezed.dart (Freezed implementation)');
 }

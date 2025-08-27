@@ -1,0 +1,8 @@
+builders:
+  soti_schema:
+    import: "package:soti_schema_plus/builder.dart"
+    builder_factories: ["sotiSchemaBuilder"]
+    build_extensions: {".dart": [".soti_schema.g.part"]}
+    auto_apply: dependents
+    build_to: cache
+    applies_builders: ["source_gen|combining_builder"]

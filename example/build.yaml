@@ -4,8 +4,3 @@ targets:
       json_serializable:
         options:
           explicit_to_json: true
-
-global_options:
-  freezed|freezed:
-    runs_before:
-      - soti_schema_plus|openApiBuilder

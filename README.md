@@ -1,13 +1,48 @@
 # soti_schema_plus
 
-soti_schema_plus is a clone of https://github.com/shtse8/SotiSchema, which
-appears to be abandoned. It provides for generating schemas directly from your
+soti_schema_plus is a fork of https://github.com/shtse8/SotiSchema, which
+appears to be abandoned. It provides for generating JSON schemas directly from your
 Dart data classes, whether you're working with `freezed` or `json_serializable`.
+
+This package automatically generates JSON Schema (draft 2020-12) from your Dart classes,
+making it easy to maintain consistent schemas alongside your data models.
 
 ## 🚀 Getting Started
 
-To make soti_schema_plus work with `freezed` and `json_serializable`, configure
-your `build.yaml` file like this:
+### Installation
+
+Add these dependencies to your `pubspec.yaml`:
+
+```yaml
+dependencies:
+  soti_schema_plus:
+    git:
+      url: https://github.com/csells/soti_schema_plus.git
+  freezed_annotation: ^3.1.0  # if using freezed
+  json_annotation: ^4.9.0      # if using json_serializable
+
+dev_dependencies:
+  build_runner: ^2.4.6
+  freezed: ^3.2.0               # if using freezed
+  json_serializable: ^6.11.0    # if using json_serializable
+```
+
+### Configuration
+
+Configure your `build.yaml` file at the root of your project:
+
+```yaml
+builders:
+  soti_schema:
+    import: "package:soti_schema_plus/builder.dart"
+    builder_factories: ["sotiSchemaBuilder"]
+    build_extensions: {".dart": [".soti_schema.g.part"]}
+    auto_apply: dependents
+    build_to: cache
+    applies_builders: ["source_gen|combining_builder"]
+```
+
+For projects using both `freezed` and `json_serializable`, add this to your `build.yaml`:
 
 ```yaml
 targets:
@@ -16,17 +51,18 @@ targets:
       json_serializable:
         options:
           explicit_to_json: true
-
-global_options:
-  freezed|freezed:
-    runs_before:
-      - soti_schema|openApiBuilder
 ```
 
 - **`explicit_to_json: true`** ensures that nested objects are correctly
   serialized by generating explicit `toJson` methods.
-- **`runs_before`** guarantees that `freezed` runs before SotiSchema, ensuring
-  that everything is in place when SotiSchema processes your classes.
+
+### Run Code Generation
+
+Generate the schema files using build_runner:
+
+```bash
+dart run build_runner build --delete-conflicting-outputs
+```
 
 ---
 
@@ -34,11 +70,11 @@ global_options:
 
 ### Example with `freezed`
 
-Here’s how to generate a JSON schema using SotiSchema with a `freezed` class:
+Here's how to generate a JSON schema using SotiSchema with a `freezed` class:
 
 ```dart
 import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:soti_schema/soti_schema.dart';
+import 'package:soti_schema_plus/annotations.dart';
 
 part 'example_model.freezed.dart';
 part 'example_model.g.dart';
@@ -46,6 +82,7 @@ part 'example_model.g.dart';
 @freezed
 @SotiSchema()
 class ExampleModel with _$ExampleModel {
+  const ExampleModel._(); // Required for custom getters
   const factory ExampleModel({
     @Default('') String name,
     @Default(0) int age,
@@ -66,7 +103,7 @@ Prefer `json_serializable`? SotiSchema has you covered:
 
 ```dart
 import 'package:json_annotation/json_annotation.dart';
-import 'package:soti_schema/soti_schema.dart';
+import 'package:soti_schema_plus/annotations.dart';
 
 part 'example_model.g.dart';
 
@@ -114,7 +151,7 @@ fields in two ways:
 
 ```dart
 import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:soti_schema/soti_schema.dart';
+import 'package:soti_schema_plus/annotations.dart';
 
 part 'example_model.freezed.dart';
 part 'example_model.g.dart';
@@ -122,6 +159,7 @@ part 'example_model.g.dart';
 @freezed
 @SotiSchema()
 class ExampleModel with _$ExampleModel {
+  const ExampleModel._();
   const factory ExampleModel({
     /// The name of the person.
     @Default('') String name,
@@ -148,8 +186,7 @@ JSON schema.
 
 ```dart
 import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:soti_schema/soti_schema.dart';
-import 'package:meta/meta.dart';
+import 'package:soti_schema_plus/annotations.dart';
 
 part 'example_model.freezed.dart';
 part 'example_model.g.dart';
@@ -157,6 +194,7 @@ part 'example_model.g.dart';
 @freezed
 @SotiSchema()
 class ExampleModel with _$ExampleModel {
+  const ExampleModel._();
   const factory ExampleModel({
     @Description('The name of the person.')
     @Default('') String name,
@@ -192,3 +230,70 @@ static String get customSchemaName => _$ExampleModelSchema;
 @jsonSchema
 static Map<String, dynamic> get anotherSchema => _$ExampleModelSchemaMap;
 ```
+
+---
+
+## 🎯 Complete Example
+
+See the `example/` directory for a complete working example that demonstrates:
+
+- Basic freezed models with schema generation
+- JsonSerializable models with dual schema formats (String and Map)
+- Models with documentation comments
+- Complex nested objects with schema references
+- Various data types including DateTime, Maps, and Lists
+
+Run the example:
+
+```bash
+cd example
+dart pub get
+dart run build_runner build --delete-conflicting-outputs
+dart run main.dart
+```
+
+---
+
+## 📝 Generated Schema Format
+
+SotiSchema generates JSON Schema draft 2020-12 compatible schemas. Here's an example of what gets generated:
+
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "The name of the person.",
+      "default": ""
+    },
+    "age": {
+      "type": "integer",
+      "description": "The age of the person in years.",
+      "default": 0
+    },
+    "hobbies": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "A list of hobbies the person enjoys.",
+      "default": []
+    }
+  },
+  "$defs": {}
+}
+```
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
