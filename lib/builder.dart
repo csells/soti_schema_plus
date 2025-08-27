@@ -4,180 +4,13 @@ import 'dart:convert';
 import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/constant/value.dart';
-// We need to keep the old element API import because source_gen's GeneratorForAnnotation
-// still uses the old API. We're implementing adapters to bridge between the two APIs.
-// ignore: deprecated_member_use
 import 'package:analyzer/dart/element/element.dart';
-import 'package:analyzer/dart/element/element2.dart';
 import 'package:analyzer/dart/element/nullability_suffix.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:build/build.dart';
-import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:source_gen/source_gen.dart';
 
 import 'annotations.dart';
-
-/// Adapter layer for Element2 to Element conversion
-/// This helps us bridge the new Element2 API with tools expecting the old Element API
-class ElementAdapter {
-  /// Convert an Element2 to a legacy Element if possible
-  // ignore: deprecated_member_use
-  static Element? toElement(Element2 element2) {
-    // Many Element2 implementations have a 'baseElement' property that returns the legacy Element
-    if (element2 is ClassElement2) {
-      return _getBaseElementViaReflection(element2);
-    } else if (element2 is FieldElement2) {
-      return _getBaseElementViaReflection(element2);
-    } else if (element2 is MethodElement2) {
-      return _getBaseElementViaReflection(element2);
-    } else if (element2 is GetterElement) {
-      return _getBaseElementViaReflection(element2);
-    } else if (element2 is SetterElement) {
-      return _getBaseElementViaReflection(element2);
-    } else if (element2 is ConstructorElement2) {
-      return _getBaseElementViaReflection(element2);
-    } else if (element2 is EnumElement2) {
-      return _getBaseElementViaReflection(element2);
-    } else if (element2 is FormalParameterElement) {
-      return _getBaseElementViaReflection(element2);
-    }
-
-    // Last resort fallback - might not work for all element types
-    return _getBaseElementViaReflection(element2);
-  }
-
-  /// Try to get the baseElement property via reflection
-  // ignore: deprecated_member_use
-  static Element? _getBaseElementViaReflection(Element2 element2) {
-    try {
-      final dynamic dynElement = element2;
-      final baseElement = dynElement.baseElement;
-      // ignore: deprecated_member_use
-      return baseElement is Element ? baseElement : null;
-    } catch (e) {
-      return null;
-    }
-  }
-
-  /// Get documentation from an Element2, checking fragment first
-  static String? getDocumentation(Element2 element2) {
-    final fragment = element2.firstFragment;
-
-    // Try to get documentation from fragment's comment
-    final String? comment = _getFragmentComment(fragment);
-    if (comment != null && comment.isNotEmpty) {
-      return comment;
-    }
-
-    // Fallback to legacy element's documentation
-    // ignore: deprecated_member_use
-    final legacyElement = toElement(element2);
-    if (legacyElement != null && legacyElement.documentationComment != null) {
-      return legacyElement.documentationComment!
-          .replaceAll(
-            RegExp(r'^\s*\/\*\*\s*|\s*\*\/\s*$|\s*\*\s?', multiLine: true),
-            '',
-          )
-          .trim();
-    }
-
-    return null;
-  }
-
-  /// Extract documentation comment from fragment
-  static String? _getFragmentComment(Fragment fragment) {
-    try {
-      // Try direct access to documentationComment property via dynamic
-      final dynamic dynFragment = fragment;
-      final comment = dynFragment.documentationComment as String?;
-      if (comment != null && comment.isNotEmpty) {
-        return comment
-            .replaceAll(
-              RegExp(r'^\s*\/\*\*\s*|\s*\*\/\s*$|\s*\*\s?', multiLine: true),
-              '',
-            )
-            .trim();
-      }
-
-      // If direct access doesn't work, try to get the comment from the fragment's node
-      final node = dynFragment.node;
-      if (node != null) {
-        final commentNode = node.documentationComment;
-        if (commentNode != null) {
-          return commentNode.tokens
-              .map((token) => token.lexeme)
-              .join('\n')
-              .replaceAll(
-                RegExp(r'^\s*\/\*\*\s*|\s*\*\/\s*$|\s*\*\s?', multiLine: true),
-                '',
-              )
-              .trim();
-        }
-      }
-    } catch (e) {
-      // Ignore reflection errors
-    }
-
-    return null;
-  }
-
-  /// Check if an Element2 has an annotation of a specific type
-  static bool hasAnnotationOf(Element2 element2, TypeChecker checker) {
-    // First try to convert to legacy Element
-    final legacyElement = toElement(element2);
-    if (legacyElement != null) {
-      return checker.hasAnnotationOf(legacyElement);
-    }
-
-    // If that fails, try reflection
-    try {
-      final dynamic dynElement = element2;
-      final metadata = dynElement.metadata as List<dynamic>?;
-
-      if (metadata != null) {
-        for (final anno in metadata) {
-          final type = anno.elementAnnotation?.computeConstantValue()?.type;
-          if (type != null && checker.isExactlyType(type)) {
-            return true;
-          }
-        }
-      }
-    } catch (e) {
-      // Ignore reflection errors
-    }
-
-    return false;
-  }
-
-  /// Get the first annotation of a specific type from an Element2
-  static DartObject? firstAnnotationOf(Element2 element2, TypeChecker checker) {
-    // Try to convert to legacy Element first
-    final legacyElement = toElement(element2);
-    if (legacyElement != null) {
-      return checker.firstAnnotationOf(legacyElement);
-    }
-
-    // If that fails, try reflection
-    try {
-      final dynamic dynElement = element2;
-      final metadata = dynElement.metadata as List<dynamic>?;
-
-      if (metadata != null) {
-        for (final anno in metadata) {
-          final constValue = anno.elementAnnotation?.computeConstantValue();
-          final type = constValue?.type;
-          if (type != null && checker.isExactlyType(type)) {
-            return constValue;
-          }
-        }
-      }
-    } catch (e) {
-      // Ignore reflection errors
-    }
-
-    return null;
-  }
-}
 
 enum DataClassType { jsonSerializable, freezed, unsupported }
 
@@ -203,84 +36,44 @@ class SotiSchemaGenerator extends GeneratorForAnnotation<SotiSchema> {
   final _schemaGenerator = JsonSchemaGenerator();
 
   @override
-  // ignore: deprecated_member_use
   FutureOr<String> generateForAnnotatedElement(
-    // ignore: deprecated_member_use
     Element element,
     ConstantReader annotation,
     BuildStep buildStep,
   ) async {
-    // Convert Element to Element2
-    // This is a special case - for the GeneratorForAnnotation, we get the old Element API
-    // So we need to find the corresponding Element2
-    ClassElement2? element2;
-
-    // We'll try to find the corresponding Element2 through our adapter
-    element2 = await _findCorrespondingElement2(element, buildStep);
-
-    if (element2 == null) {
+    // Check if element is a ClassElement
+    if (element is! ClassElement) {
       throw InvalidGenerationSourceError(
-        'Could not convert to ClassElement2: ${element.displayName}',
+        'SotiSchema can only be applied to classes: ${element.name}',
       );
     }
 
     final buffer = StringBuffer();
 
-    // Use Element2 API with children2 to get all getters
-    for (final accessor in element2.children2.whereType<GetterElement>().where(
-      (f) => f.isStatic,
-    )) {
-      if (ElementAdapter.hasAnnotationOf(
-        accessor,
-        _typeCheckers.jsonSchemaChecker,
-      )) {
-        final schema = _schemaGenerator.generateSchema(element2);
-        final name = await _getRedirectedVariableName(accessor, buildStep);
+    // Use Element API to get all getters
+    for (final getter in element.getters) {
+      if (!getter.isStatic) continue;
+
+      // Check for JsonSchema annotation using the new metadata API
+      final hasJsonSchema = getter.metadata.annotations.any((anno) {
+        final value = anno.computeConstantValue();
+        if (value == null || value.type == null) return false;
+        return _typeCheckers.jsonSchemaChecker.isExactlyType(value.type!);
+      });
+
+      if (hasJsonSchema) {
+        final schema = _schemaGenerator.generateSchema(element);
+        final name = await _getRedirectedVariableName(getter, buildStep);
         if (name == null) {
           throw InvalidGenerationSourceError(
-            'Failed to extract redirected variable name for ${accessor.displayName}.',
+            'Failed to extract redirected variable name for ${getter.name}.',
           );
         }
-        _writeSchemaToBuffer(buffer, name, accessor.returnType, schema);
+        _writeSchemaToBuffer(buffer, name, getter.returnType, schema);
       }
     }
+
     return buffer.toString();
-  }
-
-  // Find corresponding Element2 for an Element
-  // ignore: deprecated_member_use
-  Future<ClassElement2?> _findCorrespondingElement2(
-    // ignore: deprecated_member_use
-    Element element,
-    BuildStep buildStep,
-  ) async {
-    try {
-      // Try to use reflection first as it's the most direct way
-      final dynamic dynElement = element;
-      if (dynElement.element2 is ClassElement2) {
-        return dynElement.element2 as ClassElement2;
-      }
-
-      // If reflection doesn't work, we'll try to find the element by name and location
-      final resolver = buildStep.resolver;
-
-      // Use dynamic to access potentially private APIs
-      final dynamic resolverDynamic = resolver;
-      final driver = resolverDynamic.driver;
-
-      if (driver != null) {
-        // Try to get the Element2 from the driver using the Element's source and offset
-        final result = await driver.getElementDeclaration(element);
-        if (result?.element is ClassElement2) {
-          return result?.element as ClassElement2;
-        }
-      }
-    } catch (e) {
-      // Log the error but continue
-      print('Error finding Element2 for ${element.displayName}: $e');
-    }
-
-    return null;
   }
 
   void _writeSchemaToBuffer(
@@ -350,50 +143,23 @@ class SotiSchemaGenerator extends GeneratorForAnnotation<SotiSchema> {
   }
 
   Future<ParsedLibraryResult> _getParsedLibrary(
-    Element2 element,
+    Element element,
     BuildStep buildStep,
   ) async {
     final assetId = buildStep.inputId;
     final resolver = buildStep.resolver;
     final library = await resolver.libraryFor(assetId);
 
-    // Find corresponding LibraryElement for LibraryElement2
-    // ignore: deprecated_member_use
-    final legacyLibrary =
-        // ignore: deprecated_member_use
-        ElementAdapter.toElement(element.library2!) as LibraryElement?;
-    if (legacyLibrary == null) {
-      throw InvalidGenerationSourceError(
-        'Failed to convert library to LibraryElement',
-      );
-    }
+    // Use the session to get the parsed library
+    final session = library.session;
+    final parsedLibrary = session.getParsedLibraryByElement(element.library!);
 
-    // Use reflection to access getParsedLibraryByElement2 if available
-    try {
-      final dynamic session = library.session;
-      if (session != null) {
-        // Try to use the new API if it's available
-        final parsedLibraryMethod = session.getParsedLibraryByElement2;
-        if (parsedLibraryMethod != null) {
-          final result = parsedLibraryMethod(element.library2!);
-          if (result is ParsedLibraryResult) {
-            return result;
-          }
-        }
-
-        // Fall back to the old API with our legacy converter
-        // ignore: deprecated_member_use
-        final parsedLibrary = session.getParsedLibraryByElement(legacyLibrary);
-        if (parsedLibrary is ParsedLibraryResult) {
-          return parsedLibrary;
-        }
-      }
-    } catch (e) {
-      print('Error accessing parsed library: $e');
+    if (parsedLibrary is ParsedLibraryResult) {
+      return parsedLibrary;
     }
 
     throw InvalidGenerationSourceError(
-      'Failed to parse library for ${element.displayName}',
+      'Failed to parse library for ${element.name}',
     );
   }
 
@@ -423,7 +189,7 @@ class JsonSchemaGenerator {
   final _typeCheckers = TypeCheckers();
   final _generatedSchemas = <String, Map<String, dynamic>>{};
 
-  Map<String, dynamic> generateSchema(ClassElement2 element) {
+  Map<String, dynamic> generateSchema(ClassElement element) {
     _generatedSchemas.clear();
     final mainSchema = _getPropertySchema(element.thisType, isRoot: true);
 
@@ -440,9 +206,9 @@ class JsonSchemaGenerator {
     Set<DartType> seenTypes = const {},
   }) {
     if (!isRoot && seenTypes.contains(type)) {
-      final element = type.element3;
-      if (element != null) {
-        return {r'$ref': '#/\$defs/${element.displayName}'};
+      final element = type.element;
+      if (element != null && element.name != null) {
+        return {r'$ref': '#/\$defs/${element.name}'};
       }
     }
 
@@ -499,8 +265,12 @@ class JsonSchemaGenerator {
     bool isRoot,
     Set<DartType> seenTypes,
   ) {
-    final element = type.element3;
-    final typeName = element.displayName;
+    final element = type.element;
+    final typeName = element.name;
+
+    if (typeName == null) {
+      return {'type': 'object'};
+    }
 
     if (!isRoot && _generatedSchemas.containsKey(typeName)) {
       return {r'$ref': '#/\$defs/$typeName'};
@@ -574,20 +344,30 @@ class JsonSchemaGenerator {
     return schema;
   }
 
-  DataClassType _identifyDataClassType(InterfaceElement2 element) {
-    if (ElementAdapter.hasAnnotationOf(
-      element,
-      _typeCheckers.jsonSerializableChecker,
-    )) {
+  DataClassType _identifyDataClassType(InterfaceElement element) {
+    // Check for JsonSerializable annotation
+    final hasJsonSerializable = element.metadata.annotations.any((anno) {
+      final value = anno.computeConstantValue();
+      if (value == null || value.type == null) return false;
+      return _typeCheckers.jsonSerializableChecker.isExactlyType(value.type!);
+    });
+
+    if (hasJsonSerializable) {
       return DataClassType.jsonSerializable;
-    } else if (ElementAdapter.hasAnnotationOf(
-      element,
-      _typeCheckers.freezedChecker,
-    )) {
-      return DataClassType.freezed;
-    } else {
-      return DataClassType.unsupported;
     }
+
+    // Check for Freezed annotation
+    final hasFreezed = element.metadata.annotations.any((anno) {
+      final value = anno.computeConstantValue();
+      if (value == null || value.type == null) return false;
+      return _typeCheckers.freezedChecker.isExactlyType(value.type!);
+    });
+
+    if (hasFreezed) {
+      return DataClassType.freezed;
+    }
+
+    return DataClassType.unsupported;
   }
 
   DartType _getGenericType(DartType type, [int index = 0]) {
@@ -597,7 +377,7 @@ class JsonSchemaGenerator {
   }
 
   List<PropertyInfo> _getProperties(
-    InterfaceElement2 element,
+    InterfaceElement element,
     DataClassType dataClassType,
   ) {
     switch (dataClassType) {
@@ -612,18 +392,25 @@ class JsonSchemaGenerator {
     }
   }
 
-  List<PropertyInfo> _getJsonSerializableProperties(InterfaceElement2 element) {
+  List<PropertyInfo> _getJsonSerializableProperties(InterfaceElement element) {
     final properties = <PropertyInfo>[];
 
-    // Use Element2 API to get fields
-    for (var field in element.children2.whereType<FieldElement2>()) {
+    // Use Element API to get fields
+    for (var field in element.fields) {
       if (field.isStatic || !field.isPublic) continue;
 
-      // Use adapter to check annotations
-      final jsonKey = ElementAdapter.firstAnnotationOf(
-        field,
-        _typeCheckers.jsonKeyChecker,
-      );
+      // Check for JsonKey annotation
+      DartObject? jsonKey;
+      for (final anno in field.metadata.annotations) {
+        final value = anno.computeConstantValue();
+        if (value != null && value.type != null) {
+          if (_typeCheckers.jsonKeyChecker.isExactlyType(value.type!)) {
+            jsonKey = value;
+            break;
+          }
+        }
+      }
+
       final reader = jsonKey != null ? ConstantReader(jsonKey) : null;
 
       final includeFromJson = reader?.read('includeFromJson').boolValue ?? true;
@@ -635,11 +422,19 @@ class JsonSchemaGenerator {
           field.isFinal &&
           field.type.nullabilitySuffix == NullabilitySuffix.none;
       final defaultValue = reader?.read('defaultValue').objectValue;
-      final description = ElementAdapter.getDocumentation(field);
+
+      // Get documentation from the field
+      final description =
+          field.documentationComment
+              ?.replaceAll(
+                RegExp(r'^\s*\/\*\*\s*|\s*\*\/\s*$|\s*\*\s?', multiLine: true),
+                '',
+              )
+              .trim();
 
       properties.add(
         PropertyInfo(
-          field.name3 ?? '', // Use name3 from Element2 API
+          field.name ?? '',
           field.type,
           isRequired: isRequired,
           defaultValue: defaultValue,
@@ -651,23 +446,30 @@ class JsonSchemaGenerator {
     return properties;
   }
 
-  List<PropertyInfo> _getFreezedProperties(InterfaceElement2 element) {
+  List<PropertyInfo> _getFreezedProperties(InterfaceElement element) {
     final properties = <PropertyInfo>[];
-    final constructor = element.unnamedConstructor2;
+    final constructor = element.unnamedConstructor;
 
     if (constructor == null) {
       throw StateError(
-        'No unnamed constructor found for freezed class ${element.displayName}',
+        'No unnamed constructor found for freezed class ${element.name}',
       );
     }
 
     // Use Element2 API to get parameters
-    for (var parameter
-        in constructor.children2.whereType<FormalParameterElement>()) {
-      final defaultValueAnnotation = ElementAdapter.firstAnnotationOf(
-        parameter,
-        _typeCheckers.defaultChecker,
-      );
+    for (var parameter in constructor.formalParameters) {
+      // Check for Default annotation
+      DartObject? defaultValueAnnotation;
+      for (final anno in parameter.metadata.annotations) {
+        final value = anno.computeConstantValue();
+        if (value != null && value.type != null) {
+          if (_typeCheckers.defaultChecker.isExactlyType(value.type!)) {
+            defaultValueAnnotation = value;
+            break;
+          }
+        }
+      }
+
       final defaultValue =
           defaultValueAnnotation != null
               ? ConstantReader(
@@ -675,11 +477,18 @@ class JsonSchemaGenerator {
               ).read('defaultValue').objectValue
               : null;
 
-      final description = ElementAdapter.getDocumentation(parameter);
+      // Get documentation from the parameter
+      final description =
+          parameter.documentationComment
+              ?.replaceAll(
+                RegExp(r'^\s*\/\*\*\s*|\s*\*\/\s*$|\s*\*\s?', multiLine: true),
+                '',
+              )
+              .trim();
 
       properties.add(
         PropertyInfo(
-          parameter.name3 ?? '', // Use name3 from Element2 API
+          parameter.name ?? '',
           parameter.type,
           isRequired: parameter.isRequired,
           defaultValue: defaultValue,
@@ -693,24 +502,43 @@ class JsonSchemaGenerator {
 }
 
 class TypeCheckers {
-  final jsonKeyChecker = const TypeChecker.fromRuntime(JsonKey);
-  final stringChecker = const TypeChecker.fromRuntime(String);
-  final intChecker = const TypeChecker.fromRuntime(int);
-  final doubleChecker = const TypeChecker.fromRuntime(double);
-  final boolChecker = const TypeChecker.fromRuntime(bool);
-  final iterableChecker = const TypeChecker.fromRuntime(Iterable);
-  final mapChecker = const TypeChecker.fromRuntime(Map);
-  final dateTimeChecker = const TypeChecker.fromRuntime(DateTime);
-  final uriChecker = const TypeChecker.fromRuntime(Uri);
-  final objectChecker = const TypeChecker.fromRuntime(Object);
-  final jsonSchemaChecker = const TypeChecker.fromRuntime(JsonSchema);
-  final descriptionChecker = const TypeChecker.fromRuntime(Description);
-  final defaultValueChecker = const TypeChecker.fromRuntime(DefaultValue);
-  final jsonSerializableChecker = const TypeChecker.fromRuntime(
-    JsonSerializable,
+  // JSON annotation types - using exact URL matching
+  final jsonKeyChecker = const TypeChecker.fromUrl(
+    'package:json_annotation/json_annotation.dart#JsonKey',
   );
-  final freezedChecker = const TypeChecker.fromRuntime(Freezed);
-  final defaultChecker = const TypeChecker.fromRuntime(Default);
+  final jsonSerializableChecker = const TypeChecker.fromUrl(
+    'package:json_annotation/json_annotation.dart#JsonSerializable',
+  );
+
+  // Core Dart types
+  final stringChecker = const TypeChecker.fromUrl('dart:core#String');
+  final intChecker = const TypeChecker.fromUrl('dart:core#int');
+  final doubleChecker = const TypeChecker.fromUrl('dart:core#double');
+  final boolChecker = const TypeChecker.fromUrl('dart:core#bool');
+  final iterableChecker = const TypeChecker.fromUrl('dart:core#Iterable');
+  final mapChecker = const TypeChecker.fromUrl('dart:core#Map');
+  final dateTimeChecker = const TypeChecker.fromUrl('dart:core#DateTime');
+  final uriChecker = const TypeChecker.fromUrl('dart:core#Uri');
+  final objectChecker = const TypeChecker.fromUrl('dart:core#Object');
+
+  // Local annotation types - using exact URL matching
+  final jsonSchemaChecker = const TypeChecker.fromUrl(
+    'package:soti_schema_plus/annotations.dart#JsonSchema',
+  );
+  final descriptionChecker = const TypeChecker.fromUrl(
+    'package:soti_schema_plus/annotations.dart#Description',
+  );
+  final defaultValueChecker = const TypeChecker.fromUrl(
+    'package:soti_schema_plus/annotations.dart#DefaultValue',
+  );
+
+  // Freezed annotation types - using exact URL matching
+  final freezedChecker = const TypeChecker.fromUrl(
+    'package:freezed_annotation/freezed_annotation.dart#Freezed',
+  );
+  final defaultChecker = const TypeChecker.fromUrl(
+    'package:freezed_annotation/freezed_annotation.dart#Default',
+  );
 
   const TypeCheckers();
 }
