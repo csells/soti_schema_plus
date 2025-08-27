@@ -75,8 +75,9 @@ class ElementAdapter {
     if (legacyElement != null && legacyElement.documentationComment != null) {
       return legacyElement.documentationComment!
           .replaceAll(
-              RegExp(r'^\s*\/\*\*\s*|\s*\*\/\s*$|\s*\*\s?', multiLine: true),
-              '')
+            RegExp(r'^\s*\/\*\*\s*|\s*\*\/\s*$|\s*\*\s?', multiLine: true),
+            '',
+          )
           .trim();
     }
 
@@ -92,8 +93,9 @@ class ElementAdapter {
       if (comment != null && comment.isNotEmpty) {
         return comment
             .replaceAll(
-                RegExp(r'^\s*\/\*\*\s*|\s*\*\/\s*$|\s*\*\s?', multiLine: true),
-                '')
+              RegExp(r'^\s*\/\*\*\s*|\s*\*\/\s*$|\s*\*\s?', multiLine: true),
+              '',
+            )
             .trim();
       }
 
@@ -106,9 +108,9 @@ class ElementAdapter {
               .map((token) => token.lexeme)
               .join('\n')
               .replaceAll(
-                  RegExp(r'^\s*\/\*\*\s*|\s*\*\/\s*$|\s*\*\s?',
-                      multiLine: true),
-                  '')
+                RegExp(r'^\s*\/\*\*\s*|\s*\*\/\s*$|\s*\*\s?', multiLine: true),
+                '',
+              )
               .trim();
         }
       }
@@ -177,11 +179,7 @@ class ElementAdapter {
   }
 }
 
-enum DataClassType {
-  jsonSerializable,
-  freezed,
-  unsupported,
-}
+enum DataClassType { jsonSerializable, freezed, unsupported }
 
 class PropertyInfo {
   final String name;
@@ -222,22 +220,26 @@ class SotiSchemaGenerator extends GeneratorForAnnotation<SotiSchema> {
 
     if (element2 == null) {
       throw InvalidGenerationSourceError(
-          'Could not convert to ClassElement2: ${element.displayName}');
+        'Could not convert to ClassElement2: ${element.displayName}',
+      );
     }
 
     final buffer = StringBuffer();
 
     // Use Element2 API with children2 to get all getters
-    for (final accessor in element2.children2
-        .whereType<GetterElement>()
-        .where((f) => f.isStatic)) {
+    for (final accessor in element2.children2.whereType<GetterElement>().where(
+      (f) => f.isStatic,
+    )) {
       if (ElementAdapter.hasAnnotationOf(
-          accessor, _typeCheckers.jsonSchemaChecker)) {
+        accessor,
+        _typeCheckers.jsonSchemaChecker,
+      )) {
         final schema = _schemaGenerator.generateSchema(element2);
         final name = await _getRedirectedVariableName(accessor, buildStep);
         if (name == null) {
           throw InvalidGenerationSourceError(
-              'Failed to extract redirected variable name for ${accessor.displayName}.');
+            'Failed to extract redirected variable name for ${accessor.displayName}.',
+          );
         }
         _writeSchemaToBuffer(buffer, name, accessor.returnType, schema);
       }
@@ -248,9 +250,10 @@ class SotiSchemaGenerator extends GeneratorForAnnotation<SotiSchema> {
   // Find corresponding Element2 for an Element
   // ignore: deprecated_member_use
   Future<ClassElement2?> _findCorrespondingElement2(
-      // ignore: deprecated_member_use
-      Element element,
-      BuildStep buildStep) async {
+    // ignore: deprecated_member_use
+    Element element,
+    BuildStep buildStep,
+  ) async {
     try {
       // Try to use reflection first as it's the most direct way
       final dynamic dynElement = element;
@@ -280,15 +283,20 @@ class SotiSchemaGenerator extends GeneratorForAnnotation<SotiSchema> {
     return null;
   }
 
-  void _writeSchemaToBuffer(StringBuffer buffer, String name, DartType type,
-      Map<String, dynamic> schema) {
+  void _writeSchemaToBuffer(
+    StringBuffer buffer,
+    String name,
+    DartType type,
+    Map<String, dynamic> schema,
+  ) {
     if (_typeCheckers.stringChecker.isExactlyType(type)) {
       buffer.writeln('const $name = r\'${jsonEncode(schema)}\';');
     } else if (_isMapStringDynamic(type)) {
       buffer.writeln('const $name = ${_generateMapLiteral(schema)};');
     } else {
       throw InvalidGenerationSourceError(
-          'Failed to generate schema for $name. Only support String or Map<String, dynamic>.');
+        'Failed to generate schema for $name. Only support String or Map<String, dynamic>.',
+      );
     }
   }
 
@@ -332,7 +340,9 @@ class SotiSchemaGenerator extends GeneratorForAnnotation<SotiSchema> {
   }
 
   Future<String?> _getRedirectedVariableName(
-      GetterElement getter, BuildStep buildStep) async {
+    GetterElement getter,
+    BuildStep buildStep,
+  ) async {
     final parsedLibrary = await _getParsedLibrary(getter, buildStep);
     final fragment = getter.firstFragment;
     final node = _findGetterDeclaration(parsedLibrary, fragment);
@@ -340,7 +350,9 @@ class SotiSchemaGenerator extends GeneratorForAnnotation<SotiSchema> {
   }
 
   Future<ParsedLibraryResult> _getParsedLibrary(
-      Element2 element, BuildStep buildStep) async {
+    Element2 element,
+    BuildStep buildStep,
+  ) async {
     final assetId = buildStep.inputId;
     final resolver = buildStep.resolver;
     final library = await resolver.libraryFor(assetId);
@@ -352,7 +364,8 @@ class SotiSchemaGenerator extends GeneratorForAnnotation<SotiSchema> {
         ElementAdapter.toElement(element.library2!) as LibraryElement?;
     if (legacyLibrary == null) {
       throw InvalidGenerationSourceError(
-          'Failed to convert library to LibraryElement');
+        'Failed to convert library to LibraryElement',
+      );
     }
 
     // Use reflection to access getParsedLibraryByElement2 if available
@@ -380,11 +393,14 @@ class SotiSchemaGenerator extends GeneratorForAnnotation<SotiSchema> {
     }
 
     throw InvalidGenerationSourceError(
-        'Failed to parse library for ${element.displayName}');
+      'Failed to parse library for ${element.displayName}',
+    );
   }
 
   MethodDeclaration? _findGetterDeclaration(
-      ParsedLibraryResult parsedLibrary, Fragment fragment) {
+    ParsedLibraryResult parsedLibrary,
+    Fragment fragment,
+  ) {
     final result = parsedLibrary.getFragmentDeclaration(fragment);
     return (result?.node is MethodDeclaration)
         ? result!.node as MethodDeclaration
@@ -418,8 +434,11 @@ class JsonSchemaGenerator {
     };
   }
 
-  Map<String, dynamic> _getPropertySchema(DartType type,
-      {bool isRoot = false, Set<DartType> seenTypes = const {}}) {
+  Map<String, dynamic> _getPropertySchema(
+    DartType type, {
+    bool isRoot = false,
+    Set<DartType> seenTypes = const {},
+  }) {
     if (!isRoot && seenTypes.contains(type)) {
       final element = type.element3;
       if (element != null) {
@@ -460,8 +479,10 @@ class JsonSchemaGenerator {
       final valueType = _getGenericType(type, 1);
       return {
         'type': 'object',
-        'additionalProperties':
-            _getPropertySchema(valueType, seenTypes: newSeenTypes),
+        'additionalProperties': _getPropertySchema(
+          valueType,
+          seenTypes: newSeenTypes,
+        ),
       };
     }
 
@@ -474,7 +495,10 @@ class JsonSchemaGenerator {
   }
 
   Map<String, dynamic> _generateComplexTypeSchema(
-      InterfaceType type, bool isRoot, Set<DartType> seenTypes) {
+    InterfaceType type,
+    bool isRoot,
+    Set<DartType> seenTypes,
+  ) {
     final element = type.element3;
     final typeName = element.displayName;
 
@@ -490,8 +514,10 @@ class JsonSchemaGenerator {
     final required = <String>[];
 
     for (final property in properties) {
-      final propertySchema =
-          _getPropertySchema(property.type, seenTypes: seenTypes);
+      final propertySchema = _getPropertySchema(
+        property.type,
+        seenTypes: seenTypes,
+      );
 
       if (property.description != null) {
         propertySchema['description'] = property.description;
@@ -500,24 +526,30 @@ class JsonSchemaGenerator {
       if (property.defaultValue != null) {
         if (_typeCheckers.stringChecker.isAssignableFromType(property.type)) {
           propertySchema['default'] = property.defaultValue!.toStringValue();
-        } else if (_typeCheckers.intChecker
-            .isAssignableFromType(property.type)) {
+        } else if (_typeCheckers.intChecker.isAssignableFromType(
+          property.type,
+        )) {
           propertySchema['default'] = property.defaultValue!.toIntValue();
-        } else if (_typeCheckers.doubleChecker
-            .isAssignableFromType(property.type)) {
+        } else if (_typeCheckers.doubleChecker.isAssignableFromType(
+          property.type,
+        )) {
           propertySchema['default'] = property.defaultValue!.toDoubleValue();
-        } else if (_typeCheckers.boolChecker
-            .isAssignableFromType(property.type)) {
+        } else if (_typeCheckers.boolChecker.isAssignableFromType(
+          property.type,
+        )) {
           propertySchema['default'] = property.defaultValue!.toBoolValue();
-        } else if (_typeCheckers.iterableChecker
-            .isAssignableFromType(property.type)) {
+        } else if (_typeCheckers.iterableChecker.isAssignableFromType(
+          property.type,
+        )) {
           propertySchema['default'] = property.defaultValue!.toListValue();
-        } else if (_typeCheckers.mapChecker
-            .isAssignableFromType(property.type)) {
+        } else if (_typeCheckers.mapChecker.isAssignableFromType(
+          property.type,
+        )) {
           propertySchema['default'] = property.defaultValue!.toMapValue();
         } else {
           throw UnsupportedError(
-              'Unsupported default value type for property ${property.name}');
+            'Unsupported default value type for property ${property.name}',
+          );
         }
       }
 
@@ -544,10 +576,14 @@ class JsonSchemaGenerator {
 
   DataClassType _identifyDataClassType(InterfaceElement2 element) {
     if (ElementAdapter.hasAnnotationOf(
-        element, _typeCheckers.jsonSerializableChecker)) {
+      element,
+      _typeCheckers.jsonSerializableChecker,
+    )) {
       return DataClassType.jsonSerializable;
     } else if (ElementAdapter.hasAnnotationOf(
-        element, _typeCheckers.freezedChecker)) {
+      element,
+      _typeCheckers.freezedChecker,
+    )) {
       return DataClassType.freezed;
     } else {
       return DataClassType.unsupported;
@@ -561,7 +597,9 @@ class JsonSchemaGenerator {
   }
 
   List<PropertyInfo> _getProperties(
-      InterfaceElement2 element, DataClassType dataClassType) {
+    InterfaceElement2 element,
+    DataClassType dataClassType,
+  ) {
     switch (dataClassType) {
       case DataClassType.jsonSerializable:
         return _getJsonSerializableProperties(element);
@@ -569,7 +607,8 @@ class JsonSchemaGenerator {
         return _getFreezedProperties(element);
       case DataClassType.unsupported:
         throw UnsupportedError(
-            'Unsupported data class type. Use @JsonSerializable or @freezed annotation.');
+          'Unsupported data class type. Use @JsonSerializable or @freezed annotation.',
+        );
     }
   }
 
@@ -581,8 +620,10 @@ class JsonSchemaGenerator {
       if (field.isStatic || !field.isPublic) continue;
 
       // Use adapter to check annotations
-      final jsonKey =
-          ElementAdapter.firstAnnotationOf(field, _typeCheckers.jsonKeyChecker);
+      final jsonKey = ElementAdapter.firstAnnotationOf(
+        field,
+        _typeCheckers.jsonKeyChecker,
+      );
       final reader = jsonKey != null ? ConstantReader(jsonKey) : null;
 
       final includeFromJson = reader?.read('includeFromJson').boolValue ?? true;
@@ -590,18 +631,21 @@ class JsonSchemaGenerator {
 
       if (!includeFromJson || !includeToJson) continue;
 
-      final isRequired = field.isFinal &&
+      final isRequired =
+          field.isFinal &&
           field.type.nullabilitySuffix == NullabilitySuffix.none;
       final defaultValue = reader?.read('defaultValue').objectValue;
       final description = ElementAdapter.getDocumentation(field);
 
-      properties.add(PropertyInfo(
-        field.name3 ?? '', // Use name3 from Element2 API
-        field.type,
-        isRequired: isRequired,
-        defaultValue: defaultValue,
-        description: description,
-      ));
+      properties.add(
+        PropertyInfo(
+          field.name3 ?? '', // Use name3 from Element2 API
+          field.type,
+          isRequired: isRequired,
+          defaultValue: defaultValue,
+          description: description,
+        ),
+      );
     }
 
     return properties;
@@ -613,29 +657,35 @@ class JsonSchemaGenerator {
 
     if (constructor == null) {
       throw StateError(
-          'No unnamed constructor found for freezed class ${element.displayName}');
+        'No unnamed constructor found for freezed class ${element.displayName}',
+      );
     }
 
     // Use Element2 API to get parameters
     for (var parameter
         in constructor.children2.whereType<FormalParameterElement>()) {
       final defaultValueAnnotation = ElementAdapter.firstAnnotationOf(
-          parameter, _typeCheckers.defaultChecker);
-      final defaultValue = defaultValueAnnotation != null
-          ? ConstantReader(defaultValueAnnotation)
-              .read('defaultValue')
-              .objectValue
-          : null;
+        parameter,
+        _typeCheckers.defaultChecker,
+      );
+      final defaultValue =
+          defaultValueAnnotation != null
+              ? ConstantReader(
+                defaultValueAnnotation,
+              ).read('defaultValue').objectValue
+              : null;
 
       final description = ElementAdapter.getDocumentation(parameter);
 
-      properties.add(PropertyInfo(
-        parameter.name3 ?? '', // Use name3 from Element2 API
-        parameter.type,
-        isRequired: parameter.isRequired,
-        defaultValue: defaultValue,
-        description: description,
-      ));
+      properties.add(
+        PropertyInfo(
+          parameter.name3 ?? '', // Use name3 from Element2 API
+          parameter.type,
+          isRequired: parameter.isRequired,
+          defaultValue: defaultValue,
+          description: description,
+        ),
+      );
     }
 
     return properties;
@@ -656,15 +706,14 @@ class TypeCheckers {
   final jsonSchemaChecker = const TypeChecker.fromRuntime(JsonSchema);
   final descriptionChecker = const TypeChecker.fromRuntime(Description);
   final defaultValueChecker = const TypeChecker.fromRuntime(DefaultValue);
-  final jsonSerializableChecker =
-      const TypeChecker.fromRuntime(JsonSerializable);
+  final jsonSerializableChecker = const TypeChecker.fromRuntime(
+    JsonSerializable,
+  );
   final freezedChecker = const TypeChecker.fromRuntime(Freezed);
   final defaultChecker = const TypeChecker.fromRuntime(Default);
 
   const TypeCheckers();
 }
 
-Builder sotiSchemaBuilder(BuilderOptions options) => SharedPartBuilder(
-      [SotiSchemaGenerator()],
-      'soti_schema',
-    );
+Builder sotiSchemaBuilder(BuilderOptions options) =>
+    SharedPartBuilder([SotiSchemaGenerator()], 'soti_schema');
