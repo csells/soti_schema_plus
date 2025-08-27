@@ -6,8 +6,8 @@ Dart data classes, whether you're working with `freezed` or `json_serializable`.
 
 ## 🚀 Getting Started
 
-To make SotiSchema work with `freezed` and `json_serializable`, configure your
-`build.yaml` file like this:
+To make soti_schema_plus work with `freezed` and `json_serializable`, configure
+your `build.yaml` file like this:
 
 ```yaml
 targets:
