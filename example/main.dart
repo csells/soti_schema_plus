@@ -14,6 +14,7 @@ part 'main.g.dart';
 @freezed
 @SotiSchema()
 class FreezedPerson with _$FreezedPerson {
+  const FreezedPerson._();
   const factory FreezedPerson({
     @Default('') String name,
     @Default(0) int age,
@@ -63,6 +64,7 @@ class JsonPerson {
 @freezed
 @SotiSchema()
 class DocumentedPerson with _$DocumentedPerson {
+  const DocumentedPerson._();
   const factory DocumentedPerson({
     /// The full name of the person.
     @Default('') String name,
@@ -188,6 +190,7 @@ class Employee {
 @freezed
 @SotiSchema()
 class Product with _$Product {
+  const Product._();
   const factory Product({
     /// Unique product identifier
     required String productId,
@@ -287,6 +290,8 @@ void main() {
   // print(Product.schema);
   print('Product schema will be available after running build_runner\n');
 
+  // Comment out these examples until build_runner generates the necessary files
+  /*
   // Demonstrate creating and serializing objects
   print('\n=== Object Creation Examples ===\n');
 
@@ -330,11 +335,13 @@ void main() {
     warrantyMonths: 24,
   );
   print('\nProduct: ${product.toJson()}');
+  */
 
   print('\n=== Instructions ===');
   print('1. Run: dart pub get');
-  print('2. Run: dart run build_runner build');
-  print('3. Run: dart run example/main.dart');
+  print('2. Run: dart run build_runner build --delete-conflicting-outputs');
+  print('3. Uncomment the example code in main() to test');
+  print('4. Run: dart run example/main.dart');
   print('');
   print('This will generate all the necessary .g.dart and .freezed.dart files');
   print('and make the schema constants available for use.');
