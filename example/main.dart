@@ -1,9 +1,56 @@
 import 'dart:convert';
 
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:json_annotation/json_annotation.dart';
 import 'package:soti_schema_plus/annotations.dart';
 
 part 'main.g.dart';
+
+void main() {
+  const encoder = JsonEncoder.withIndent('  ');
+
+  print('JsonSerializable Model Schema (String):');
+  print('------------------------------------------');
+  // Decode to remove escapes, then pretty-print
+  print(encoder.convert(jsonDecode(JsonPerson.schema)));
+  print('');
+
+  print('JsonSerializable Model Schema (Map):');
+  print('---------------------------------------');
+  print(encoder.convert(JsonPerson.schemaMap));
+  print('');
+
+  print('Employee Model Schema:');
+  print('-------------------------');
+  final empSchema = jsonDecode(Employee.schemaString);
+  print(encoder.convert(empSchema));
+  print('');
+
+  print('Address Model Schema:');
+  print('------------------------');
+  final addrSchema = jsonDecode(Address.schema);
+  print(encoder.convert(addrSchema));
+  print('');
+
+  final employee = Employee(
+    name: 'Jane Smith',
+    employeeId: 12345,
+    department: 'Engineering',
+    email: 'jane.smith@example.com',
+    skills: ['Dart', 'Flutter', 'TypeScript'],
+    yearsOfExperience: 5.5,
+    hireDate: DateTime(2019, 3, 15),
+    officeAddress: Address(
+      street: '123 Tech Street',
+      city: 'San Francisco',
+      state: 'CA',
+      postalCode: '94105',
+      country: 'USA',
+    ),
+  );
+  print('\nEmployee:');
+  print(encoder.convert(employee.toJson()));
+}
 
 // JsonSerializable Model with Multiple Schema Formats
 @SotiSchema()
@@ -116,46 +163,4 @@ class Employee {
 
   @jsonSchema
   static Map<String, dynamic> get schemaObject => _$EmployeeSchemaMap;
-}
-
-void main() {
-  print('JsonSerializable Model Schema (String):');
-  print('------------------------------------------');
-  print(JsonPerson.schema);
-  print('');
-
-  print('JsonSerializable Model Schema (Map):');
-  print('---------------------------------------');
-  print(jsonEncode(JsonPerson.schemaMap));
-  print('');
-
-  print('Employee Model Schema:');
-  print('-------------------------');
-  final empSchema = jsonDecode(Employee.schemaString);
-  print(jsonEncode(empSchema));
-  print('');
-
-  print('Address Model Schema:');
-  print('------------------------');
-  final addrSchema = jsonDecode(Address.schema);
-  print(jsonEncode(addrSchema));
-  print('');
-
-  final employee = Employee(
-    name: 'Jane Smith',
-    employeeId: 12345,
-    department: 'Engineering',
-    email: 'jane.smith@example.com',
-    skills: ['Dart', 'Flutter', 'TypeScript'],
-    yearsOfExperience: 5.5,
-    hireDate: DateTime(2019, 3, 15),
-    officeAddress: Address(
-      street: '123 Tech Street',
-      city: 'San Francisco',
-      state: 'CA',
-      postalCode: '94105',
-      country: 'USA',
-    ),
-  );
-  print('\nEmployee: ${jsonEncode(employee.toJson())}');
 }

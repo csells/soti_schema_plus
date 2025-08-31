@@ -41,6 +41,8 @@ class SotiSchemaGenerator extends GeneratorForAnnotation<SotiSchema> {
     ConstantReader annotation,
     BuildStep buildStep,
   ) async {
+    // Helpful diagnostics
+    log.info('SotiSchema: processing class ${element.displayName}');
     // Check if element is a ClassElement2
     if (element is! ClassElement2) {
       throw InvalidGenerationSourceError(
@@ -62,6 +64,7 @@ class SotiSchemaGenerator extends GeneratorForAnnotation<SotiSchema> {
       });
 
       if (hasJsonSchema) {
+        log.fine('SotiSchema: found @jsonSchema getter ${getter.displayName} in ${element.displayName}');
         final schema = _schemaGenerator.generateSchema(element);
         final name = await _getRedirectedVariableName(getter, buildStep);
         if (name == null) {
@@ -83,7 +86,8 @@ class SotiSchemaGenerator extends GeneratorForAnnotation<SotiSchema> {
     Map<String, dynamic> schema,
   ) {
     if (_typeCheckers.stringChecker.isExactlyType(type)) {
-      buffer.writeln('const $name = r\'${jsonEncode(schema)}\';');
+      // Use raw triple quotes so embedded single quotes in descriptions don't break parsing
+      buffer.writeln("const $name = r'''${jsonEncode(schema)}''';");
     } else if (_isMapStringDynamic(type)) {
       buffer.writeln('const $name = ${_generateMapLiteral(schema)};');
     } else {
@@ -102,7 +106,8 @@ class SotiSchemaGenerator extends GeneratorForAnnotation<SotiSchema> {
   }
 
   String _escapeKey(String key) {
-    return 'r\'$key\'';
+    // Raw triple-quoted to safely include $ and single quotes
+    return "r'''$key'''";
   }
 
   String _convertValueToString(dynamic value) {
@@ -111,7 +116,8 @@ class SotiSchemaGenerator extends GeneratorForAnnotation<SotiSchema> {
     } else if (value is List) {
       return _convertListToString(value);
     } else if (value is String) {
-      return 'r\'$value\'';
+      // Raw triple-quoted to avoid escaping for $ and single quotes
+      return "r'''$value'''";
     } else {
       return value.toString();
     }
@@ -349,6 +355,18 @@ class JsonSchemaGenerator {
     });
 
     if (hasJsonSerializable) {
+      log.fine('SotiSchema: ${element.displayName} identified as JsonSerializable');
+      return DataClassType.jsonSerializable;
+    }
+
+    // Heuristic fallback: match by simple name to handle analyzer/URL discrepancies
+    final hasJsonSerializableByName = element.metadata2.annotations.any((anno) {
+      final t = anno.computeConstantValue()?.type;
+      final name = t?.getDisplayString();
+      return name == 'JsonSerializable';
+    });
+    if (hasJsonSerializableByName) {
+      log.fine('SotiSchema: ${element.displayName} identified as JsonSerializable (by name)');
       return DataClassType.jsonSerializable;
     }
 
@@ -360,9 +378,15 @@ class JsonSchemaGenerator {
     });
 
     if (hasFreezed) {
+      log.fine('SotiSchema: ${element.displayName} identified as Freezed');
       return DataClassType.freezed;
     }
 
+    // Provide diagnostics when unsupported
+    final annotations = element.metadata2.annotations
+        .map((a) => a.computeConstantValue()?.type?.getDisplayString() ?? '<unknown>')
+        .join(', ');
+    log.severe('SotiSchema: ${element.displayName} has unsupported data class type. Found annotations: [$annotations]');
     return DataClassType.unsupported;
   }
 
@@ -382,8 +406,9 @@ class JsonSchemaGenerator {
       case DataClassType.freezed:
         return _getFreezedProperties(element);
       case DataClassType.unsupported:
+        // Strict failure: require @JsonSerializable or @freezed
         throw UnsupportedError(
-          'Unsupported data class type. Use @JsonSerializable or @freezed annotation.',
+          'Unsupported data class type for ${element.displayName}. Use @JsonSerializable or @freezed annotation.',
         );
     }
   }
@@ -519,7 +544,7 @@ class TypeCheckers {
 
   // Local annotation types - using exact URL matching
   final jsonSchemaChecker = const TypeChecker.fromUrl(
-    'package:soti_schema_plus/annotations.dart#JsonSchema',
+    'package:soti_schema_plus/annotations.dart#SotiJsonSchema',
   );
   final descriptionChecker = const TypeChecker.fromUrl(
     'package:soti_schema_plus/annotations.dart#Description',

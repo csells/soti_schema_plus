@@ -1,5 +1,9 @@
 targets:
   $default:
+    sources:
+      - $package$
+      - lib/**
+      - "*.dart"
     builders:
       json_serializable:
         options:

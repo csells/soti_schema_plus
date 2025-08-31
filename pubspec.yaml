@@ -1,6 +1,6 @@
 name: soti_schema_plus
 description: A tool for generating schemas from Dart data classes.
-version: 1.1.0
+version: 1.2.0
 homepage: https://github.com/csells/soti_schema_plus
 repository: https://github.com/csells/soti_schema_plus
 
@@ -22,3 +22,4 @@ dev_dependencies:
 dependency_overrides:
   analyzer: 7.7.0 # remove when freezed is updated to use analyzer 8.0.0
   source_gen: 3.1.0 # remove when freezed is updated to use source_gen 4.0.0
+  dart_style: 3.0.1 # remove when freezed is updated to use dart_style 4.0.0

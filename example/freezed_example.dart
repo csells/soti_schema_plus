@@ -4,11 +4,57 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:soti_schema_plus/annotations.dart';
 
 part 'freezed_example.freezed.dart';
+part 'freezed_example.g.dart';
+
+void main() {
+  const encoder = JsonEncoder.withIndent('  ');
+  print('Freezed Model Schema:');
+  print('------------------------');
+  print(encoder.convert(jsonDecode(FreezedPerson.schema)));
+  print('');
+
+  print('Documented Model Schema:');
+  print('---------------------------');
+  final docSchema = jsonDecode(DocumentedPerson.schema);
+  print(encoder.convert(docSchema));
+  print('');
+
+  print('7. Product Model Schema:');
+  print('------------------------');
+  final prodSchema = jsonDecode(Product.schema);
+  print(encoder.convert(prodSchema));
+  print('');
+
+  final person = FreezedPerson(
+    name: 'John Doe',
+    age: 30,
+    hobbies: ['reading', 'coding', 'hiking'],
+  );
+  print('FreezedPerson:');
+  print(encoder.convert(person.toJson()));
+
+  final product = Product(
+    productId: 'PROD-001',
+    name: 'Wireless Mouse',
+    description: 'Ergonomic wireless mouse with long battery life',
+    price: 29.99,
+    stockQuantity: 150,
+    categories: ['Electronics', 'Computer Accessories'],
+    tags: ['wireless', 'mouse', 'ergonomic', 'bluetooth'],
+    dimensions: {'length': 12.0, 'width': 6.5, 'height': 4.0},
+    weight: 0.095,
+    manufacturer: 'TechGear Inc.',
+    releaseDate: DateTime(2024, 1, 15),
+    warrantyMonths: 24,
+  );
+  print('\nProduct:');
+  print(encoder.convert(product.toJson()));
+}
 
 // Basic Freezed Model
 @freezed
 @SotiSchema()
-class FreezedPerson with _$FreezedPerson {
+abstract class FreezedPerson with _$FreezedPerson {
   const FreezedPerson._();
   const factory FreezedPerson({
     @Default('') String name,
@@ -26,7 +72,7 @@ class FreezedPerson with _$FreezedPerson {
 // Freezed Model with Doc Comments for Descriptions
 @freezed
 @SotiSchema()
-class DocumentedPerson with _$DocumentedPerson {
+abstract class DocumentedPerson with _$DocumentedPerson {
   const DocumentedPerson._();
   const factory DocumentedPerson({
     /// The full name of the person.
@@ -55,7 +101,7 @@ class DocumentedPerson with _$DocumentedPerson {
 // Product Catalog with Various Data Types
 @freezed
 @SotiSchema()
-class Product with _$Product {
+abstract class Product with _$Product {
   const Product._();
   const factory Product({
     /// Unique product identifier
@@ -106,46 +152,4 @@ class Product with _$Product {
 
   @jsonSchema
   static Map<String, dynamic> get schemaMap => _$ProductSchemaMap;
-}
-
-void main() {
-  print('Freezed Model Schema:');
-  print('------------------------');
-  print(FreezedPerson.schema);
-  print('');
-
-  print('Documented Model Schema:');
-  print('---------------------------');
-  final docSchema = jsonDecode(DocumentedPerson.schema);
-  print(jsonEncode(docSchema));
-  print('');
-
-  print('7. Product Model Schema:');
-  print('------------------------');
-  final prodSchema = jsonDecode(Product.schema);
-  print(jsonEncode(prodSchema));
-  print('');
-
-  final person = FreezedPerson(
-    name: 'John Doe',
-    age: 30,
-    hobbies: ['reading', 'coding', 'hiking'],
-  );
-  print('FreezedPerson: ${person.toJson()}');
-
-  final product = Product(
-    productId: 'PROD-001',
-    name: 'Wireless Mouse',
-    description: 'Ergonomic wireless mouse with long battery life',
-    price: 29.99,
-    stockQuantity: 150,
-    categories: ['Electronics', 'Computer Accessories'],
-    tags: ['wireless', 'mouse', 'ergonomic', 'bluetooth'],
-    dimensions: {'length': 12.0, 'width': 6.5, 'height': 4.0},
-    weight: 0.095,
-    manufacturer: 'TechGear Inc.',
-    releaseDate: DateTime(2024, 1, 15),
-    warrantyMonths: 24,
-  );
-  print('\nProduct: ${jsonEncode(product.toJson())}');
 }

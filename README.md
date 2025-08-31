@@ -1,11 +1,13 @@
 # soti_schema_plus
 
 soti_schema_plus is a fork of https://github.com/shtse8/SotiSchema, which
-appears to be abandoned. It provides for generating JSON schemas directly from your
-Dart data classes, whether you're working with `freezed` or `json_serializable`.
+appears to be abandoned. It provides for generating JSON schemas directly from
+your Dart data classes, whether you're working with `freezed` or
+`json_serializable`.
 
-This package automatically generates JSON Schema (draft 2020-12) from your Dart classes,
-making it easy to maintain consistent schemas alongside your data models.
+This package automatically generates JSON Schema (draft 2020-12) from your Dart
+classes, making it easy to maintain consistent schemas alongside your data
+models.
 
 ## 🚀 Getting Started
 
@@ -15,9 +17,7 @@ Add these dependencies to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  soti_schema_plus:
-    git:
-      url: https://github.com/csells/soti_schema_plus.git
+  soti_schema_plus: ^1.2.0
   freezed_annotation: ^3.1.0  # if using freezed
   json_annotation: ^4.9.0      # if using json_serializable
 
@@ -29,20 +29,22 @@ dev_dependencies:
 
 ### Configuration
 
-Configure your `build.yaml` file at the root of your project:
+Configure your `build.yaml` file at the root of your project (this registers the
+builder so dependents like your app/example can use it):
 
 ```yaml
 builders:
   soti_schema:
     import: "package:soti_schema_plus/builder.dart"
     builder_factories: ["sotiSchemaBuilder"]
-    build_extensions: {".dart": [".soti_schema.g.part"]}
+    build_extensions: {".dart": [".g.part"]}
     auto_apply: dependents
     build_to: cache
     applies_builders: ["source_gen|combining_builder"]
 ```
 
-For projects using both `freezed` and `json_serializable`, add this to your `build.yaml`:
+For projects using both `freezed` and `json_serializable`, add this to your
+`build.yaml`:
 
 ```yaml
 targets:
@@ -256,7 +258,8 @@ dart run main.dart
 
 ## 📝 Generated Schema Format
 
-SotiSchema generates JSON Schema draft 2020-12 compatible schemas. Here's an example of what gets generated:
+SotiSchema generates JSON Schema draft 2020-12 compatible schemas. Here's an
+example of what gets generated:
 
 ```json
 {
@@ -296,4 +299,5 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License - see the LICENSE file for
+details.
