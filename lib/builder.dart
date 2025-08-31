@@ -64,7 +64,9 @@ class SotiSchemaGenerator extends GeneratorForAnnotation<SotiSchema> {
       });
 
       if (hasJsonSchema) {
-        log.fine('SotiSchema: found @jsonSchema getter ${getter.displayName} in ${element.displayName}');
+        log.fine(
+          'SotiSchema: found @jsonSchema getter ${getter.displayName} in ${element.displayName}',
+        );
         final schema = _schemaGenerator.generateSchema(element);
         final name = await _getRedirectedVariableName(getter, buildStep);
         if (name == null) {
@@ -355,7 +357,9 @@ class JsonSchemaGenerator {
     });
 
     if (hasJsonSerializable) {
-      log.fine('SotiSchema: ${element.displayName} identified as JsonSerializable');
+      log.fine(
+        'SotiSchema: ${element.displayName} identified as JsonSerializable',
+      );
       return DataClassType.jsonSerializable;
     }
 
@@ -366,7 +370,9 @@ class JsonSchemaGenerator {
       return name == 'JsonSerializable';
     });
     if (hasJsonSerializableByName) {
-      log.fine('SotiSchema: ${element.displayName} identified as JsonSerializable (by name)');
+      log.fine(
+        'SotiSchema: ${element.displayName} identified as JsonSerializable (by name)',
+      );
       return DataClassType.jsonSerializable;
     }
 
@@ -384,9 +390,14 @@ class JsonSchemaGenerator {
 
     // Provide diagnostics when unsupported
     final annotations = element.metadata2.annotations
-        .map((a) => a.computeConstantValue()?.type?.getDisplayString() ?? '<unknown>')
+        .map(
+          (a) =>
+              a.computeConstantValue()?.type?.getDisplayString() ?? '<unknown>',
+        )
         .join(', ');
-    log.severe('SotiSchema: ${element.displayName} has unsupported data class type. Found annotations: [$annotations]');
+    log.severe(
+      'SotiSchema: ${element.displayName} has unsupported data class type. Found annotations: [$annotations]',
+    );
     return DataClassType.unsupported;
   }
 
