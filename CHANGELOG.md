@@ -1,3 +1,7 @@
+## 1.2.0
+
+- removed conflict with JsonSchema
+
 ## 1.1.0
 
 - Cloned from original repo

@@ -8,7 +8,7 @@ environment:
   sdk: ^3.7.2
 
 dependencies:
-  analyzer: ^7.5.9
+  analyzer: ">=7.5.9 <8.0.0"
   build: ^3.0.0
   source_gen: ^3.0.0
   meta: ^1.10.0
@@ -18,3 +18,7 @@ dependencies:
 
 dev_dependencies:
   lints: ^6.0.0
+
+dependency_overrides:
+  analyzer: 7.7.0 # remove when freezed is updated to use analyzer 8.0.0
+  source_gen: 3.1.0 # remove when freezed is updated to use source_gen 4.0.0

@@ -1,14 +1,11 @@
-/// A library for generating JSON schemas from Dart data classes.
-library;
-
 /// Annotation to mark a class as a JSON schema.
-class JsonSchema {
-  /// Creates a new [JsonSchema] annotation.
-  const JsonSchema();
+class SotiJsonSchema {
+  /// Creates a new [SotiJsonSchema] annotation.
+  const SotiJsonSchema();
 }
 
 /// Annotation to mark a class as a JSON schema.
-const jsonSchema = JsonSchema();
+const jsonSchema = SotiJsonSchema();
 
 /// Annotation to mark a class as a Soti schema.
 class SotiSchema {
